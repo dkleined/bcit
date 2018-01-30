@@ -84,8 +84,8 @@ function internal_config {
 }
 
 function install_gateway {
-	gateway_config
 	restore_all
+	gateway_config
 	setup_default
 	custom_chains
 	custom_chains
