@@ -1,10 +1,12 @@
 #!/bin/sh
 source ./config.sh
 
-$IFG enp3s2 $intGatewayHostId up
-echo "1" >/proc/sys/net/ipv4/ip_forward
-route add -net $intNetworkAdd netmask 255.255.255.0 gw $gatewayPubHost
-route add -net $intNetworkAdd/24 gw $intGatewayHostId
+function gateway_config {
+	$IFG enp3s2 $intGatewayHostId up
+	echo "1" >/proc/sys/net/ipv4/ip_forward
+	route add -net $intNetworkAdd netmask 255.255.255.0 gw $gatewayPubHost
+	route add -net $intNetworkAdd/24 gw $intGatewayHostId
+}
 
 function restore_all {
 	## Clear iptables settings ##
@@ -75,13 +77,14 @@ function custom_rules {
 	$IPT -A OUTPUT -t mangle -p tcp --dport 20 -j TOS --set-tos Maximize-Throughput
 }
 
-function install_internal {
+function internal_config {
 	$IFG eno1 down
 	$IFG enp3s2 $intClientHostId
 	route add default gw $intGatewayHostId
 }
 
 function install_gateway {
+	gateway_config
 	restore_all
 	setup_default
 	custom_chains
@@ -99,6 +102,6 @@ elif [ "$1" = "gateway" ]
 	exit 0
 elif [ "$1" = "internal" ]	
 	echo "Setting up internal..."
-	install_internal
+	internal_config
 	exit 0
 fi
