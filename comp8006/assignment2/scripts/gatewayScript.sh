@@ -19,8 +19,8 @@ $IPT -t nat -A POSTROUTING -o eno1 -j MASQUERADE
 ## Set up forwarding to internal network ##
 $IPT -A FORWARD -i eno1 -o enp3s2 -m state --state RELATED,ESTABLISHED -j ACCEPT
 $IPT -A FORWARD -i eno1 -o enp3s2 -j ACCEPT
-$IPT -A FORWARD -i enp3s2 -d 10.0.0.0/8
-$IPT -A FORWARD -o enp3s2 -s 10.0.0.0/8
+$IPT -A FORWARD -i enp3s2 -d $intNetworkAdd/8
+$IPT -A FORWARD -o enp3s2 -s $intNetworkAdd/8
 ## Custom chains ##
 $IPT -N TCP_CHAIN
 $IPT -N UDP_CHAIN
@@ -36,7 +36,7 @@ $IPT -A TCP_CHAIN -m state --state RELATED,ESTABLISHED
 for tcp_port in ${tcp_ports[@]}
 do
     $IPT -A TCP_CHAIN -m tcp -p tcp --dport $tcp_port -j ACCEPT
-    $IPT -t nat -A PREROUTING -p tcp -i eno1 --dport $tcp_port -j DNAT --to-destination 10.0.0.2:$tcp_port
+    $IPT -t nat -A PREROUTING -p tcp -i eno1 --dport $tcp_port -j DNAT --to-destination $intClientHostId:$tcp_port
 done
 ## Allow UDP ##
 for udp_port in ${udp_ports[@]}
