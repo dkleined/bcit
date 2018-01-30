@@ -65,7 +65,7 @@ function custom_chains {
 	$IPT -A TCP_CHAIN -m tcp -p tcp --dport 23 -j DROP
 }
 
-function custom_rules {
+function set_tos {
 	## SSH ##
 	$IPT -A PREROUTING -t mangle -p tcp --sport 22 -j TOS --set-tos Minimize-Delay
 	$IPT -A OUTPUT -t mangle -p tcp --dport 22 -j TOS --set-tos Minimize-Delay
@@ -88,7 +88,7 @@ function install_gateway {
 	gateway_config
 	setup_default
 	custom_chains
-	custom_chains
+	set_tos
 }
 
 if [ "$1" = "clear" ]
