@@ -16,6 +16,9 @@ function restore_all {
 	$IPT -Z
 	$IPT -F
 	$IPT -X
+	route del default gw $intGatewayHostId
+	route del -net $intNetworkAdd netmask $gatewayNetmask gw $gatewayPubHost
+	route del -net $intNetworkAdd/24 gw $intGatewayHostId
 }
 
 function setup_default {
@@ -26,7 +29,7 @@ function setup_default {
 	## Set up masquerade for outgoing ##
 	$IPT -t nat -A POSTROUTING -o $gatewayPrimaryNetCard -j MASQUERADE
 	## Set up forwarding to internal network ##
-	$IPT -A FORWARD -i $gatewayPrimaryNetCard -o $gatewaySecondaryNetCard -m state --state RELATED,ESTABLISHED -j ACCEPT
+	$IPT -A FORWARD -i $gatewayPrimaryNetCard -o $gatewaySecondaryNetCard -m state --state NEW,ESTABLISHED -j ACCEPT
 	$IPT -A FORWARD -i $gatewayPrimaryNetCard -o $gatewaySecondaryNetCard -j ACCEPT
 	$IPT -A FORWARD -i $gatewaySecondaryNetCard -d $intNetworkAdd/8
 	$IPT -A FORWARD -o $gatewaySecondaryNetCard -s $intNetworkAdd/8
@@ -36,19 +39,23 @@ function custom_chains {
 	## Custom chains ##
 	$IPT -N TCP_CHAIN
 	$IPT -N UDP_CHAIN
+	$IPT -N INVALID_CHAIN
 
 	#$IPT -A INPUT -p tcp -j FORWARD
 	$IPT -A FORWARD -p tcp -j TCP_CHAIN
 	$IPT -A FORWARD -p udp -j UDP_CHAIN
 
-	$IPT -A TCP_CHAIN -m state --state RELATED,ESTABLISHED
+	$IPT -A TCP_CHAIN -m state --state NEW,RELATED,ESTABLISHED -j ACCEPT
 
+	## Invalid ##
+	$IPT -A INVALID_CHAIN -p ALL -m state --state INVALID -j DROP
 
 	## Allow TCP ##
 	for tcp_port in ${tcp_ports[@]}
 	do
-		$IPT -A TCP_CHAIN -m tcp -p tcp --dport $tcp_port -j ACCEPT
-		$IPT -t nat -A PREROUTING -p tcp -i $gatewayPrimaryNetCard --dport $tcp_port -j DNAT --to-destination $intClientHostId:$tcp_port
+		$IPT -A TCP_CHAIN -m tcp -p tcp --dport $tcp_port -m conntrack --ctstate  NEW,ESTABLISHED -j ACCEPT
+		$IPT -t nat -A PREROUTING -p tcp -i $gatewayPrimaryNetCard --dport $tcp_port -j DNAT --to $intClientHostId:$tcp_port
+		#$IPT -t nat -A PREROUTING -i $gatewayPrimaryNetCard  -p tcp --dport $tcp_port -j REDIRECT --to-destination $intClientHostId:$tcp_port
 	done
 	## Allow UDP ##
 	for udp_port in ${udp_ports[@]}
@@ -63,6 +70,9 @@ function custom_chains {
 	$IPT -A TCP_CHAIN -m tcp -p tcp --dport 111 -j DROP
 	$IPT -A TCP_CHAIN -m tcp -p tcp --dport 515 -j DROP
 	$IPT -A TCP_CHAIN -m tcp -p tcp --dport 23 -j DROP
+
+	$IPT -A TCP_CHAIN -m tcp -p tcp -i $gatewayPrimaryNetCard -s $intNetworkAdd -j DROP
+	$IPT -A TCP_CHAIN -m udp -p udp -i $gatewayPrimaryNetCard -s $intNetworkAdd -j DROP
 }
 
 function set_tos {
@@ -101,7 +111,7 @@ then
 	echo "Setting up gateway..."
 	install_gateway
 	exit 0
-elif [ "$1" = "internal" ]	
+elif [ "$1" = "internal" ]
 then
 	echo "Setting up internal..."
 	internal_config

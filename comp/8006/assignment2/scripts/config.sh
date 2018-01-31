@@ -8,7 +8,7 @@ intClientHostId=$intNetwork.2
 intPrimaryNetCard=eno1
 intSecondaryNetCard=enp3s2
 ## gateway ##
-gatewayPubHost=192.168.0.12
+gatewayPubHost=192.168.0.2
 gatewayNetmask=255.255.255.0
 intGatewayHostId=$intNetwork.1
 gatewayPrimaryNetCard=eno1
