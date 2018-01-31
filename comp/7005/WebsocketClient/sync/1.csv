@@ -1,0 +1,3 @@
+Username,FirstName,Nickname,LastName,LoginMethod,UserStatus,InvitationExpired,Disabled
+daniel@jostle.me,Dan,,Klein,Password,Activated,No,No
+daniel+klein@jostle.me,Daniel,,Klein,Password,Invited,No,Yes
