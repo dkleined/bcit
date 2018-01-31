@@ -20,7 +20,7 @@ function restore_all {
 
 function setup_default {
 	## Set default policies to DROP ##
-	$IPT -P INPUT DROPx
+	$IPT -P INPUT DROP
 	$IPT -P OUTPUT DROP
 	$IPT -P FORWARD DROP
 	## Set up masquerade for outgoing ##
@@ -97,10 +97,12 @@ then
 	restore_all
 	exit 0
 elif [ "$1" = "gateway" ]
+then
 	echo "Setting up gateway..."
 	install_gateway
 	exit 0
 elif [ "$1" = "internal" ]	
+then
 	echo "Setting up internal..."
 	internal_config
 	exit 0
