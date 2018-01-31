@@ -2,7 +2,7 @@
 source ./config.sh
 
 function gateway_config {
-	$IFG enp3s2 $intGatewayHostId up
+	$IFG $gatewaySecondaryNetCard $intGatewayHostId up
 	echo "1" >/proc/sys/net/ipv4/ip_forward
 	route add -net $intNetworkAdd netmask $gatewayNetmask gw $gatewayPubHost
 	route add -net $intNetworkAdd/24 gw $intGatewayHostId
@@ -20,16 +20,16 @@ function restore_all {
 
 function setup_default {
 	## Set default policies to DROP ##
-	$IPT -P INPUT DROP
+	$IPT -P INPUT DROPx
 	$IPT -P OUTPUT DROP
 	$IPT -P FORWARD DROP
 	## Set up masquerade for outgoing ##
-	$IPT -t nat -A POSTROUTING -o eno1 -j MASQUERADE
+	$IPT -t nat -A POSTROUTING -o $gatewayPrimaryNetCard -j MASQUERADE
 	## Set up forwarding to internal network ##
-	$IPT -A FORWARD -i eno1 -o enp3s2 -m state --state RELATED,ESTABLISHED -j ACCEPT
-	$IPT -A FORWARD -i eno1 -o enp3s2 -j ACCEPT
-	$IPT -A FORWARD -i enp3s2 -d $intNetworkAdd/8
-	$IPT -A FORWARD -o enp3s2 -s $intNetworkAdd/8
+	$IPT -A FORWARD -i $gatewayPrimaryNetCard -o $gatewaySecondaryNetCard -m state --state RELATED,ESTABLISHED -j ACCEPT
+	$IPT -A FORWARD -i $gatewayPrimaryNetCard -o $gatewaySecondaryNetCard -j ACCEPT
+	$IPT -A FORWARD -i $gatewaySecondaryNetCard -d $intNetworkAdd/8
+	$IPT -A FORWARD -o $gatewaySecondaryNetCard -s $intNetworkAdd/8
 }
 
 function custom_chains {
@@ -48,7 +48,7 @@ function custom_chains {
 	for tcp_port in ${tcp_ports[@]}
 	do
 		$IPT -A TCP_CHAIN -m tcp -p tcp --dport $tcp_port -j ACCEPT
-		$IPT -t nat -A PREROUTING -p tcp -i eno1 --dport $tcp_port -j DNAT --to-destination $intClientHostId:$tcp_port
+		$IPT -t nat -A PREROUTING -p tcp -i $gatewayPrimaryNetCard --dport $tcp_port -j DNAT --to-destination $intClientHostId:$tcp_port
 	done
 	## Allow UDP ##
 	for udp_port in ${udp_ports[@]}
@@ -78,8 +78,8 @@ function set_tos {
 }
 
 function internal_config {
-	$IFG eno1 down
-	$IFG enp3s2 $intClientHostId
+	$IFG $intPrimaryNetCard down
+	$IFG $intSecondaryNetCard $intClientHostId
 	route add default gw $intGatewayHostId
 }
 
