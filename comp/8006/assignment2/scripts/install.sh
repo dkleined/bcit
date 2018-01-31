@@ -33,6 +33,7 @@ function setup_default {
 	$IPT -A FORWARD -i $gatewayPrimaryNetCard -o $gatewaySecondaryNetCard -j ACCEPT
 	$IPT -A FORWARD -i $gatewaySecondaryNetCard -d $intNetworkAdd/8
 	$IPT -A FORWARD -o $gatewaySecondaryNetCard -s $intNetworkAdd/8
+	$IPT -A FORWARD -f -j ACCEPT
 }
 
 function custom_chains {
@@ -40,10 +41,12 @@ function custom_chains {
 	$IPT -N TCP_CHAIN
 	$IPT -N UDP_CHAIN
 	$IPT -N INVALID_CHAIN
+	$IPT -N ICMP_CHAIN
 
 	#$IPT -A INPUT -p tcp -j FORWARD
 	$IPT -A FORWARD -p tcp -j TCP_CHAIN
 	$IPT -A FORWARD -p udp -j UDP_CHAIN
+	$IPT -A FORWARD -p icmp -j ICMP_CHAIN
 
 	$IPT -A TCP_CHAIN -m state --state NEW,RELATED,ESTABLISHED -j ACCEPT
 
@@ -61,6 +64,14 @@ function custom_chains {
 	for udp_port in ${udp_ports[@]}
 	do
 		$IPT -A UDP_CHAIN -m udp -p udp --dport $udp_port -j ACCEPT
+	done
+	## ICMP ##
+	for icmp_type in ${icmp_types[@]}
+	do
+		echo "allowing icmp type $icmp_type"
+		$IPT -A ICMP_CHAIN -p icmp -s $intNetworkAdd/24 --icmp-type $icmp_type -j ACCEPT
+		$IPT -A ICMP_CHAIN -p icmp -s $gatewayNetwork/24 --icmp-type $icmp_type -j ACCEPT
+		$IPT -t nat -A PREROUTING -p icmp -s $gatewayNetwork/24 --icmp-type $icmp_type -j DNAT --to $intClientHostId
 	done
 	## Specific rules ##
 	$IPT -A TCP_CHAIN -m tcp -p tcp --dport 32768:32775 -j DROP
