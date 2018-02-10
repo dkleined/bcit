@@ -114,6 +114,8 @@ function internal_config {
 	$IFG $intPrimaryNetCard down
 	$IFG $intSecondaryNetCard $intClientHostId
 	route add default gw $intGatewayHostId
+	echo "Setting /etc/resolv.conf..."
+	set_resolv_file
 }
 
 function install_gateway {
@@ -122,6 +124,10 @@ function install_gateway {
 	setup_default
 	custom_chains
 	set_tos
+}
+
+function set_resolv_file {
+	echo -e $nameservers > /etc/resolv.conf
 }
 
 if [ "$1" = "clear" ]
@@ -138,5 +144,15 @@ elif [ "$1" = "internal" ]
 then
 	echo "Setting up internal..."
 	internal_config
+	exit 0
+elif [ "$1" = "help" ]
+then
+	echo -e "Firewall install help menu:\n"
+	echo "Configure internal machine: 	./install.sh internal"
+	echo -e "Configuration of gateway: 	./install.sh gateway\n"
+	echo -e "To set the address of the gateway, modify the entry (gatewayPubHost) in config.sh\n"
+	exit 0
+else
+	echo -e "Unrecognized option.\nRun \"./install.sh help\" for assistance."
 	exit 0
 fi
